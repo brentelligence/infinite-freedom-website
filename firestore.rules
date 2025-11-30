@@ -1,0 +1,30 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Leads collection - Allow anyone to create (submit form), but only authenticated users can read
+    match /leads/{leadId} {
+      // Allow anyone to create a new lead (form submission)
+      allow create: if request.resource.data.keys().hasAll(['motivation', 'address', 'contactName', 'phoneNumber', 'email', 'createdAt', 'status'])
+                    && request.resource.data.status == 'new'
+                    && request.resource.data.createdAt == request.time
+                    && request.resource.data.email.matches('.*@.*\\..*')
+                    && request.resource.data.phoneNumber is string
+                    && request.resource.data.contactName is string
+                    && request.resource.data.address is string
+                    && request.resource.data.motivation is string;
+      
+      // Only authenticated users can read leads
+      allow read: if request.auth != null;
+      
+      // Only authenticated users can update or delete leads
+      allow update, delete: if request.auth != null;
+    }
+    
+    // Deny all other collections by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
